@@ -182,7 +182,7 @@ class MtkGpsBRom:
 
         self._checked_write("\xa2")
         self._checked_write(struct.pack(">L", address))
-        self._checked_write(struct.pack(">L", length/2))
+        self._checked_write(struct.pack(">L", int(length/2)))
         resp = ""
         while len(resp) < length:
             c = self._ser.read()
@@ -216,7 +216,7 @@ class MtkGpsBRom:
 
         self._checked_write("\xaf")
         self._checked_write(struct.pack(">L", address))
-        self._checked_write(struct.pack(">L", length/4))
+        self._checked_write(struct.pack(">L", int(length/4)))
         resp = ""
         while len(resp) < length:
             c = self._ser.read()
@@ -312,7 +312,7 @@ class MtkGpsBRom:
 
         self._checked_write("\xa4")
         self._checked_write(struct.pack(">L", address))
-        self._checked_write(struct.pack(">L", length/2))
+        self._checked_write(struct.pack(">L", int(length/2)))
         resp = ""
         while len(resp) < 2:
             c = self._ser.read()
