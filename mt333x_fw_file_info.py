@@ -352,6 +352,25 @@ print("Release Version: {}.{}".format(file_info['release_major'],
                                       file_info['release_minor']))
 print("build number: {:x}".format(file_info['build_number']))
 print("")
+print("(?)Original file name: "
+      "AXN{}.{}_{:04x}_{}_{}.{}{}{}{}{}{}{}.{}.bin".format(
+            file_info['release_major'],
+            file_info['release_minor'],
+            file_info['build_number'],
+            ('3329' if file_info['release_major'] == 1 else
+                '3339' if file_info['release_major'] == 2 else
+                '3333' if file_info['release_major'] == 3 else
+                '33??'),  # TODO: for now use version, investigate byte 0x110
+            enum_to_str(STRINGS_BAUD_RATES, file_info['baud_rate'])[:-2],
+            file_info['rate_gga'],
+            file_info['rate_gsa'],
+            file_info['rate_gsv'],
+            file_info['rate_rmc'],
+            file_info['rate_vtg'],
+            file_info['rate_gll'],  # TODO: verify
+            file_info['rate_zda'],  # TODO: verify
+            file_info['update_rate']
+        ))
 print("(?)Firmware size: {}{}".format(
             file_info['fw_size'],
             " (Unknown)" if file_info['fw_size'] == 0 else ""))

@@ -27,3 +27,18 @@ Example filenames of download agents:
 - MTK_AllInOne_DA_MT3329_v4.02.bin (md5: 52724a12c7186bdede40ce65e0d81c5e)
 - MTK_AllInOne_DA_MT3333_MP.BIN (md5: 028a2c42d1e39623c8aa148d8a0e6709)
 - MTK_AllInOne_DA_MT3339_E3.bin (md5: 973d91e32b1cc37a332bfc9e235bc372)
+
+## Firmware file names
+The firmware files from GlobalTop follow a strict nameing scheme. For example:
+
+AXN3.20_8033_3333_96.1151100.1.bin
+- AXN: Fixed Prefix
+- 3.20: Firmware Version
+- 8033: Build number
+- 3333: Target chipset, in this case MTK3333
+- 96: Baud rate / 100, in this case 9600 Baud
+- 1151100: NMEA sentence rate: { GGA, GSA, GSV, RMC, VTG, ?GLL?, ?ZDA? }
+- 1: Update rate, ie. 1 Hz
+
+Note: NMEA sentence rate can be 10. This gives a rather hard to decode filename
+like: AXN2.31_5657_3339_1152.101010101000.10.bin
