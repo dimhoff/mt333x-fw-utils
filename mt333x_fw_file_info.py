@@ -32,8 +32,8 @@
 import struct
 import argparse
 
-VERSION_MAJOR=0
-VERSION_MINOR=1
+VERSION_MAJOR = 0
+VERSION_MINOR = 1
 
 # Following defines are taken from LocusParser.cpp example
 LOCUS_CONTENT_UTC   =  (1 << 0)   # 4-byte
@@ -57,7 +57,7 @@ LOCUS_MODE_SPD      = (1 << 5)  # Speed mode (logging by speed, ex:10 m/s)
 # TODO: higher baud(>115200) rates are guesses
 STRINGS_BAUD_RATES = ('115200', '912600?', '460800?', '230400?', '57600', '38400', '19200', '14400', '9600', '4800')
 
-LED_DUTY_CYCLE = ( "OFF", "50ms", "100ms", "200ms", "1/8", "1/2", "7/8", "ON" )
+LED_DUTY_CYCLE = ("OFF", "50ms", "100ms", "200ms", "1/8", "1/2", "7/8", "ON")
 
 STRINGS_DATUM = (
         'WGS 84',
@@ -285,6 +285,7 @@ STRINGS_DATUM = (
         'Zanderij'
     )
 
+
 def enum_to_str(names, idx, default="Out-of-range"):
     if idx >= len(names):
         return default
@@ -302,99 +303,141 @@ args = parser.parse_args()
 # Read header
 header = args.file.read(0xa00)
 
-# Dump header
-print("(?) Firmware family: " + header[0x90:0xb0].strip('\x00'))
-print("Device Type: " + header[0x1b0:0x1c0].strip('\x00'))
 
-print("Release Name: {}".format(header[0x148:0x150].strip('\x00')))
-(release_major, release_minor) = struct.unpack("BB", header[0x15A:0x15C])
-print("Release Version: {}.{}".format(release_major, release_minor))
-print("build number: {:x}".format(struct.unpack("<H", header[0x108:0x10a])[0]))
+file_info = {
+        'firmware_family': header[0x90:0xb0].strip(b'\x00').decode('utf-8'),
+        'device_type': header[0x1b0:0x1c0].strip(b'\x00').decode('utf-8'),
+        'release_name': header[0x148:0x150].strip(b'\x00').decode('utf-8'),
+        'release_major': struct.unpack_from("B", header, 0x15A)[0],
+        'release_minor': struct.unpack_from("B", header, 0x15B)[0],
+        'build_number': struct.unpack("<H", header[0x108:0x10a])[0],
+        'fw_size': struct.unpack("<L", header[0xf4:0xf8])[0],
+        'serial_port_string': (
+            header[0x190:0x1a0].strip(b'\x00').decode('utf-8')),
+        'baud_rate': struct.unpack_from("B", header, 0x120)[0],
+        'nmea_precision': (
+                6 if (struct.unpack_from("B", header, 0x162)[0] & 0x4 != 0)
+                else 4),
+        'update_rate': struct.unpack_from("B", header, 0x11c)[0],
+        'rate_gga': struct.unpack_from("B", header, 0x128)[0],
+        'rate_gll': struct.unpack_from("B", header, 0x129)[0],
+        'rate_unk': struct.unpack_from("B", header, 0x12a)[0],
+        'rate_gsv': struct.unpack_from("B", header, 0x12b)[0],
+        'rate_gsa': struct.unpack_from("B", header, 0x12c)[0],
+        'rate_vtg': struct.unpack_from("B", header, 0x12d)[0],
+        'rate_rmc': struct.unpack_from("B", header, 0x12e)[0],
+        'rate_gll2': struct.unpack_from("B", header, 0x12f)[0],
+        'rate_zda': struct.unpack_from("B", header, 0x138)[0],
+        'gps_datum': struct.unpack_from("B", header, 0x11b)[0],
+        'nav_threshold': struct.unpack_from("B", header, 0x136)[0],
+        'led_no_fix': struct.unpack_from("B", header, 0x121)[0],
+        'led_fix': struct.unpack_from("B", header, 0x122)[0],
+        'locus_type': struct.unpack_from("B", header, 0x182)[0],
+        'locus_mode': struct.unpack_from("B", header, 0x183)[0],
+        'locus_record_content': struct.unpack_from("<L", header, 0x184)[0],
+        'locus_interval': struct.unpack_from("<H", header, 0x188)[0],
+        'locus_distance': struct.unpack_from("<H", header, 0x18a)[0],
+        'locus_speed': struct.unpack_from("<H", header, 0x18c)[0],
+    }
+
+# Dump header
+print("(?) Firmware family: " + file_info['firmware_family'])
+print("Device Type: " + file_info['device_type'])
+
+print("Release Name: " + file_info['release_name'])
+print("Release Version: {}.{}".format(file_info['release_major'],
+                                      file_info['release_minor']))
+print("build number: {:x}".format(file_info['build_number']))
 print("")
-fw_size = struct.unpack("<L", header[0xf4:0xf8])[0]
-print("(?)Firmware size: {}{}".format(fw_size, " (Unknown)" if fw_size == 0 else ""))
-print("Serial port string: " + header[0x190:0x1a0].strip('\x00'))
+print("(?)Firmware size: {}{}".format(
+            file_info['fw_size'],
+            " (Unknown)" if file_info['fw_size'] == 0 else ""))
+print("Serial port string: " + file_info['serial_port_string'])
 
 # Generic config stuff
 print("")
 
-print("Baud Rate: " + enum_to_str(STRINGS_BAUD_RATES, ord(header[0x120])))
-    
-print("NMEA Coordinate Precision: {} digits".format(6 if (ord(header[0x162]) & 0x4 != 0) else 4))
-print("Update Rate: {}".format(ord(header[0x11c])))
+print("Baud Rate: " + enum_to_str(STRINGS_BAUD_RATES, file_info['baud_rate']))
+
+print("NMEA Coordinate Precision: {} digits".format(
+            file_info['nmea_precision']))
+print("Update Rate: {}".format(file_info['update_rate']))
 print("Sentence rates:")
-print(" - GGA: {}".format(ord(header[0x128])))
-print(" - GLL: {}".format(ord(header[0x129])))
-print(" - ???: {}".format(ord(header[0x12a])))
-print(" - GSV: {}".format(ord(header[0x12b])))
-print(" - GSA: {}".format(ord(header[0x12c])))
-print(" - VTG: {}".format(ord(header[0x12d])))
-print(" - RMC: {}".format(ord(header[0x12e])))
-print(" - GLL(2): {}".format(ord(header[0x12f])))
-print(" - ZDA: {}".format(ord(header[0x138])))
+print(" - GGA: {}".format(file_info['rate_gga']))
+print(" - GLL: {}".format(file_info['rate_gll']))
+print(" - ???: {}".format(file_info['rate_unk']))
+print(" - GSV: {}".format(file_info['rate_gsv']))
+print(" - GSA: {}".format(file_info['rate_gsa']))
+print(" - VTG: {}".format(file_info['rate_vtg']))
+print(" - RMC: {}".format(file_info['rate_rmc']))
+print(" - GLL(2): {}".format(file_info['rate_gll2']))
+print(" - ZDA: {}".format(file_info['rate_zda']))
 
 print("")
-print("GPS Datum: {}".format(enum_to_str(STRINGS_DATUM, ord(header[0x11b]))))
-nav_threshold = ord(header[0x136])
-if nav_threshold > 0xa:
+print("GPS Datum: {}".format(enum_to_str(STRINGS_DATUM,
+                                         file_info['gps_datum'])))
+if file_info['nav_threshold'] > 0xa:
     print("WARNING: Nav. Threshold > 0xa; unexpected")
-print("Nav. Threshold: {:.2f}".format(0.2 * nav_threshold))
+print("Nav. Threshold: {:.2f}".format(0.2 * file_info['nav_threshold']))
 
 print("")
 print("3d-fix LED:")
-print(" - no fix: {}, {}".format(0.5 * ((ord(header[0x121]) & 0x1F) + 1),
-         enum_to_str(LED_DUTY_CYCLE, ord(header[0x121]) >> 5)))
-print(" - fix: {}, {}".format(0.5 * ((ord(header[0x122]) & 0x1F) + 1),
-         enum_to_str(LED_DUTY_CYCLE, ord(header[0x122]) >> 5)))
+print(" - no fix: {}, {}".format(
+            0.5 * ((file_info['led_no_fix'] & 0x1F) + 1),
+            enum_to_str(LED_DUTY_CYCLE, file_info['led_no_fix'] >> 5)))
+print(" - fix: {}, {}".format(
+            0.5 * ((file_info['led_fix'] & 0x1F) + 1),
+            enum_to_str(LED_DUTY_CYCLE, file_info['led_fix'] >> 5)))
 
 # LOCUS stuff
-if release_major > 1 or (release_major == 1 and release_minor > 51):
+if file_info['release_major'] > 1 or (file_info['release_major'] == 1 and
+                                      file_info['release_minor'] > 51):
     print("")
     print("LOCUS settings:")
 
-    locus_types = ( "Overlap", "Full-Stop", "unknown")
-    print(" -  type: " + enum_to_str(locus_types, ord(header[0x182])))
+    locus_types = ("Overlap", "Full-Stop", "unknown")
+    print(" -  type: " + enum_to_str(locus_types, file_info['locus_type']))
 
-    locus_mode = ord(header[0x183])
-    modes = [] 
-    if locus_mode & LOCUS_MODE_AL:
+    modes = []
+    if file_info['locus_mode'] & LOCUS_MODE_AL:
         modes.append("AlwaysLocate(TM)")
-    if locus_mode & LOCUS_MODE_FIX_ONLY:
+    if file_info['locus_mode'] & LOCUS_MODE_FIX_ONLY:
         modes.append("Fix Only")
-    if locus_mode & LOCUS_MODE_NORM:
+    if file_info['locus_mode'] & LOCUS_MODE_NORM:
         modes.append("Normal")
-    if locus_mode & LOCUS_MODE_IVAL:
+    if file_info['locus_mode'] & LOCUS_MODE_IVAL:
         modes.append("Interval")
-    if locus_mode & LOCUS_MODE_DST:
+    if file_info['locus_mode'] & LOCUS_MODE_DST:
         modes.append("Distance")
-    if locus_mode & LOCUS_MODE_SPD:
+    if file_info['locus_mode'] & LOCUS_MODE_SPD:
         modes.append("Speed")
     print(" -  mode: " + ", ".join(modes))
 
-    record_content = struct.unpack_from("<L", header, 0x184)[0]
     record_fields = ""
-    if record_content & LOCUS_CONTENT_UTC:
+    if file_info['locus_record_content'] & LOCUS_CONTENT_UTC:
         record_fields += "Timestamp, "
-    if record_content & LOCUS_CONTENT_VALID:
+    if file_info['locus_record_content'] & LOCUS_CONTENT_VALID:
         record_fields += "Validity, "
-    if record_content & LOCUS_CONTENT_LAT:
+    if file_info['locus_record_content'] & LOCUS_CONTENT_LAT:
         record_fields += "Latitude, "
-    if record_content & LOCUS_CONTENT_LON:
+    if file_info['locus_record_content'] & LOCUS_CONTENT_LON:
         record_fields += "Longitude, "
-    if record_content & LOCUS_CONTENT_HGT:
+    if file_info['locus_record_content'] & LOCUS_CONTENT_HGT:
         record_fields += "Height, "
-    if record_content & LOCUS_CONTENT_SPD:
+    if file_info['locus_record_content'] & LOCUS_CONTENT_SPD:
         record_fields += "Speed, "
-    if record_content & LOCUS_CONTENT_TRK:
+    if file_info['locus_record_content'] & LOCUS_CONTENT_TRK:
         record_fields += "Track, "
-    if record_content & LOCUS_CONTENT_HDOP:
+    if file_info['locus_record_content'] & LOCUS_CONTENT_HDOP:
         record_fields += "HDOP, "
-    if record_content & LOCUS_CONTENT_NSAT:
+    if file_info['locus_record_content'] & LOCUS_CONTENT_NSAT:
         record_fields += "# Satellites, "
     if len(record_fields) != 0:
         record_fields += "Checksum"
     print(" -  record content: " + record_fields)
 
-    print(" -  interval: {}".format(struct.unpack_from("<H", header, 0x188)[0]))
-    print(" -  distance: {}".format(struct.unpack_from("<H", header, 0x18a)[0]))
+    print(" -  interval: {}".format(
+                struct.unpack_from("<H", header, 0x188)[0]))
+    print(" -  distance: {}".format(
+                struct.unpack_from("<H", header, 0x18a)[0]))
     print(" -  speed: {}".format(struct.unpack_from("<H", header, 0x18c)[0]))
