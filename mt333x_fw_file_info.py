@@ -303,6 +303,9 @@ args = parser.parse_args()
 # Read header
 header = args.file.read(0xa00)
 
+if len(header) < 0xa00:
+    print("ERROR: file does not contain full firmware header")
+    exit(1)
 
 file_info = {
         'firmware_family': header[0x90:0xb0].strip(b'\x00').decode('utf-8'),
